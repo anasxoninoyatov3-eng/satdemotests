@@ -7,9 +7,12 @@ import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Exam from './pages/Exam';
 import Results from './pages/Results';
+import Admin from './pages/Admin';
+import { ADMIN_LOGIN } from './data/users';
+import { fetchRemoteConfig, isEnabled, TestConfig } from './data/testConfig';
 import { useFullscreen } from './hooks/useFullscreen';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TestDef, ResultData } from './data/tests';
+import { TestDef, ResultData, TESTS } from './data/tests';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<string | null>(null);
@@ -18,6 +21,11 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('testlar');
   const [results, setResults] = useState<ResultData[]>([]);
   const [currentTest, setCurrentTest] = useState<TestDef | null>(null);
+  const [config, setConfig] = useState<TestConfig>({});
+  const isAdmin = user === ADMIN_LOGIN;
+
+  useEffect(() => { if (user && !isAdmin) fetchRemoteConfig().then(setConfig); }, [user, isAdmin]);
+  const visibleTests = TESTS.filter(t => isEnabled(config, t.id));
 
   // Natijalar har bir foydalanuvchi uchun brauzerda saqlanadi
   useEffect(() => {
@@ -93,6 +101,8 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
         {!user ? (
           <Login key="login" onLogin={(name) => setUser(name)} />
+        ) : isAdmin ? (
+          <Admin key="admin" onLogout={() => setUser(null)} />
         ) : isExamMode && currentTest ? (
           <Exam 
             key="exam" 
@@ -108,7 +118,7 @@ const App: React.FC = () => {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
           >
-            {activeTab === 'testlar' && <Dashboard onStartExam={startExam} results={results} />}
+            {activeTab === 'testlar' && <Dashboard onStartExam={startExam} results={results} tests={visibleTests} />}
             {activeTab === 'darajam' && <Results results={results} onRestart={() => setActiveTab('testlar')} />}
             {activeTab === 'profile' && (
               <div className="bg-white dark:bg-panel-dark p-8 rounded-[32px] border border-slate-200 dark:border-slate-800 text-center">

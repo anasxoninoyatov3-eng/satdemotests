@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClock, faShieldHalved, faChevronRight, faMugHot } from '@fortawesome/free-solid-svg-icons';
-import { MODULES, BREAK_MINUTES, TestDef, ResultData, isCorrect } from '../data/tests';
+import { MODULES, BREAK_MINUTES, TestDef, ResultData, ReviewItem, ModuleStat, isCorrect } from '../data/tests';
 
 interface ExamProps {
   test: TestDef;
@@ -51,14 +51,22 @@ const Exam: React.FC<ExamProps> = ({ test, onComplete }) => {
     if (finished.current) return;
     finished.current = true;
     let rw = 0, math = 0, rwN = 0, mathN = 0;
+    const review: ReviewItem[] = [];
+    const modStats: ModuleStat[] = [];
     mods.forEach((qs, mi) => {
       const subj = MODULES[mi].subject;
       if (subj === 'rw') rwN += qs.length; else mathN += qs.length;
+      let mc = 0;
       qs.forEach((q, j) => {
-        if (isCorrect(answersRef.current[offsets[mi] + j], q.answer)) {
+        const given = answersRef.current[offsets[mi] + j];
+        const ok = isCorrect(given, q.answer);
+        if (ok) {
+          mc++;
           if (subj === 'rw') rw++; else math++;
         }
+        review.push({ m: mi, n: j + 1, given, key: q.answer, ok });
       });
+      modStats.push({ name: MODULES[mi].name, correct: mc, total: qs.length });
     });
     const section = (c: number, n: number) => 200 + Math.round((c / n) * 600 / 10) * 10;
     const rwScore = section(rw, rwN);
@@ -68,6 +76,7 @@ const Exam: React.FC<ExamProps> = ({ test, onComplete }) => {
       score: rwScore + mathScore, rwScore, mathScore,
       correct: rw + math, total,
       timeSpent: Math.floor((Date.now() - startTime.current) / 1000),
+      modules: modStats, review,
     });
   };
 
@@ -110,7 +119,7 @@ const Exam: React.FC<ExamProps> = ({ test, onComplete }) => {
         <FontAwesomeIcon icon={faClock} className="w-6 h-6" /> {fmt(timeLeft)}
       </div>
       <div className="flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-full text-[10px] font-black uppercase tracking-widest border border-brand/20">
-        <FontAwesomeIcon icon={faShieldHalved} className="w-3.5 h-3.5" /> ChSB Rejimi
+        <FontAwesomeIcon icon={faShieldHalved} className="w-3.5 h-3.5" /> SAT Rejimi
       </div>
     </div>
   );

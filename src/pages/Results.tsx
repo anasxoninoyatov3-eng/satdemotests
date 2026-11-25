@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAward, faClock, faBullseye, faCircleCheck, faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+import { faAward, faClock, faBullseye, faCircleCheck, faRotateLeft, faCircleXmark, faMinus } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
 import { ResultData } from '../data/tests';
 
@@ -10,6 +10,9 @@ interface ResultsProps {
 }
 
 const Results: React.FC<ResultsProps> = ({ results, onRestart }) => {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [onlyWrong, setOnlyWrong] = useState(false);
+
   if (results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 opacity-40">
@@ -20,7 +23,9 @@ const Results: React.FC<ResultsProps> = ({ results, onRestart }) => {
     );
   }
 
-  const latest = results[results.length - 1];
+  const selIdx = selected !== null && selected < results.length ? selected : results.length - 1;
+  const latest = results[selIdx];
+  const fmtKey = (k: string) => k.split('|').join(' yoki ');
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -75,6 +80,71 @@ const Results: React.FC<ResultsProps> = ({ results, onRestart }) => {
         </div>
       </div>
 
+      {/* Modullar bo'yicha natija */}
+      {latest.modules && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {latest.modules.map((m, i) => (
+            <div key={i} className="bg-white dark:bg-panel-dark p-5 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{m.name}</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white font-montserrat">
+                {m.correct} <span className="text-sm text-slate-400">/ {m.total}</span>
+              </p>
+              <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                <div className="h-full bg-brand" style={{ width: `${(m.correct / m.total) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Savollar tahlili */}
+      {latest.review && latest.modules && (
+        <div className="bg-white dark:bg-panel-dark rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center gap-4">
+            <h3 className="font-bold text-slate-900 dark:text-white font-montserrat">Javoblar tahlili — {latest.title}</h3>
+            <button onClick={() => setOnlyWrong(v => !v)}
+              className={`text-xs font-bold px-4 py-2 rounded-xl border transition-all ${onlyWrong ? 'bg-brand text-white border-brand' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>
+              Faqat xatolar
+            </button>
+          </div>
+          <div className="p-6 space-y-8">
+            {latest.modules.map((mod, mi) => {
+              const items = latest.review!.filter(r => r.m === mi);
+              const shown = onlyWrong ? items.filter(r => !r.ok) : items;
+              return (
+                <div key={mi}>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                    {mod.name} · {mod.correct} / {mod.total}
+                  </h4>
+                  <div className="space-y-2">
+                    {shown.length === 0 && <p className="text-sm text-emerald-500 font-semibold">Xato yo'q 🎉</p>}
+                    {shown.map(r => (
+                      <div key={r.n} className={`flex items-center gap-4 p-3 rounded-xl border text-sm ${
+                        r.ok ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10'
+                             : r.given ? 'border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10'
+                                       : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30'}`}>
+                        <span className="w-8 text-center font-black text-slate-500">{r.n}</span>
+                        <FontAwesomeIcon
+                          icon={r.ok ? faCircleCheck : r.given ? faCircleXmark : faMinus}
+                          className={`w-4 h-4 ${r.ok ? 'text-emerald-500' : r.given ? 'text-red-500' : 'text-slate-400'}`} />
+                        <span className="text-slate-600 dark:text-slate-300">
+                          Sizning javobingiz: <b>{r.given ?? 'javob berilmagan'}</b>
+                        </span>
+                        {!r.ok && (
+                          <span className="ml-auto text-slate-600 dark:text-slate-300">
+                            To'g'ri javob: <b className="text-emerald-600 dark:text-emerald-400">{r.key ? fmtKey(r.key) : '—'}</b>
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* History List */}
       <div className="bg-white dark:bg-panel-dark rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
@@ -89,8 +159,9 @@ const Results: React.FC<ResultsProps> = ({ results, onRestart }) => {
           )}
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {results.slice().reverse().map((res, i) => (
-            <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+          {results.map((res, i) => ({ res, i })).reverse().map(({ res, i }) => (
+            <div key={i} onClick={() => setSelected(i)}
+              className={`p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors ${i === selIdx ? 'bg-brand/5' : ''}`}>
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
                   <FontAwesomeIcon icon={faCircleCheck} className="w-5 h-5" />

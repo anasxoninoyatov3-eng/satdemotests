@@ -2,14 +2,15 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTableCellsLarge, faFileLines, faClock, faPlay, faCircle, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
-import { TESTS, TestDef, ResultData, countOf, TOTAL_MINUTES, hasKey } from '../data/tests';
+import { TestDef, ResultData, countOf, TOTAL_MINUTES, BREAK_MINUTES, hasKey } from '../data/tests';
 
 interface DashboardProps {
   onStartExam: (test: TestDef) => void;
   results: ResultData[];
+  tests: TestDef[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onStartExam, results }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onStartExam, results, tests }) => {
   return (
     <div className="space-y-8">
       <div className="bg-white dark:bg-panel-dark border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm flex items-center gap-6">
@@ -25,7 +26,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartExam, results }) => {
       <div className="bg-white dark:bg-panel-dark border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 shadow-sm">
         <h2 className="font-bold text-slate-900 dark:text-white font-montserrat mb-4 px-2">Faol testlar</h2>
         <div className="space-y-4">
-          {TESTS.map((t, i) => {
+          {tests.length === 0 && <p className="px-2 text-sm text-slate-400">Hozircha faol testlar yo'q.</p>}
+          {tests.map((t, i) => {
             const done = results.filter(r => r.testId === t.id);
             const best = done.length ? Math.max(...done.map(r => r.score)) : null;
             return (
@@ -45,7 +47,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartExam, results }) => {
                       {t.title} {best !== null && <span className="ml-2 text-xs text-emerald-500">Eng yaxshi: {best}</span>}
                     </h3>
                     <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      <span className="flex items-center gap-1.5"><FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5" /> {TOTAL_MINUTES} daqiqa + 10 daq. tanaffus</span>
+                      <span className="flex items-center gap-1.5"><FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5" /> {TOTAL_MINUTES + BREAK_MINUTES} daqiqa (tanaffus bilan)</span>
                       <span className="flex items-center gap-1.5"><FontAwesomeIcon icon={faCircle} className="w-1.5 h-1.5" /> {countOf(t)} savol</span>
                       {!hasKey(t) && <span className="text-amber-500">Javob kaliti kiritilmagan</span>}
                     </div>
